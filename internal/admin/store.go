@@ -482,14 +482,15 @@ func (s *Store) ClearLog(jobGroup, jobId int, clearBefore time.Time, clearType i
 
 // ============ xxl_job_log_report ============
 
-// LogReportCount 今日统计。
+// LogReportCount 某日统计（闭开区间：day 00:00 <= trigger_time < day+1 00:00）。
 func (s *Store) LogReportCount(day time.Time) (running, suc, fail int64, err error) {
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, day.Location())
+	dayEnd := dayStart.AddDate(0, 0, 1)
 	row := s.db.QueryRow(`SELECT
 		COALESCE(SUM(CASE WHEN trigger_code=200 AND handle_code=0 THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN handle_code=200 THEN 1 ELSE 0 END),0),
 		COALESCE(SUM(CASE WHEN !(trigger_code=200 AND handle_code=0) AND handle_code != 200 THEN 1 ELSE 0 END),0)
-		FROM xxl_job_log WHERE trigger_time >= ?`, dayStart)
+		FROM xxl_job_log WHERE trigger_time >= ? AND trigger_time < ?`, dayStart, dayEnd)
 	err = row.Scan(&running, &suc, &fail)
 	return
 }

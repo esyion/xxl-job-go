@@ -184,6 +184,33 @@ func (s *Service) handleUpdatePwd(w http.ResponseWriter, r *http.Request, u *Job
 	writeJSON(w, returnOK(nil))
 }
 
+// ============ 权限辅助（对应原版 JobGroupPermissionUtil） ============
+
+// normalizeQueryGroup 普通用户强制 jobGroup 限定在授权分组内：
+// 未选/越权时回落到第一个授权分组（原版行为）；无任何授权则返回 false（空结果）。
+func normalizeQueryGroup(u *JobUser, jobGroup int) (int, bool) {
+	if u.IsAdmin() {
+		return jobGroup, true
+	}
+	groups := u.PermissionGroups()
+	if len(groups) == 0 {
+		return 0, false
+	}
+	if jobGroup > 0 && u.HasGroupPermission(jobGroup) {
+		return jobGroup, true
+	}
+	return groups[0], true
+}
+
+// requireGroupPermission 校验用户对分组的操作权限，无权则写拒绝响应。
+func requireGroupPermission(w http.ResponseWriter, u *JobUser, groupID int) bool {
+	if u.HasGroupPermission(groupID) {
+		return true
+	}
+	writeJSON(w, returnFail("您没有该执行器的操作权限"))
+	return false
+}
+
 // ============ 任务管理 ============
 
 func (s *Service) handleJobPageList(w http.ResponseWriter, r *http.Request, u *JobUser) {
@@ -202,7 +229,13 @@ func (s *Service) handleJobPageList(w http.ResponseWriter, r *http.Request, u *J
 	if req.Length <= 0 {
 		req.Length = 10
 	}
-	list, total, err := s.store.PageJobInfo(req.JobGroup, req.Name, req.ExecutorHandler, req.TriggerStatus, req.Start, req.Length)
+	// permission check
+	jobGroup, ok := normalizeQueryGroup(u, req.JobGroup)
+	if !ok {
+		writeJSON(w, map[string]any{"recordsTotal": 0, "data": []any{}})
+		return
+	}
+	list, total, err := s.store.PageJobInfo(jobGroup, req.Name, req.ExecutorHandler, req.TriggerStatus, req.Start, req.Length)
 	if err != nil {
 		writeJSON(w, returnFail(err.Error()))
 		return
@@ -218,6 +251,10 @@ func (s *Service) handleJobSave(w http.ResponseWriter, r *http.Request, u *JobUs
 	}
 	if req.JobGroup <= 0 || req.Name == "" {
 		writeJSON(w, returnFail("请填写执行器和任务名称"))
+		return
+	}
+	// permission check
+	if !requireGroupPermission(w, u, req.JobGroup) {
 		return
 	}
 	if req.ScheduleType == "" {
@@ -256,6 +293,10 @@ func (s *Service) handleJobUpdate(w http.ResponseWriter, r *http.Request, u *Job
 		writeJSON(w, returnFail("任务不存在"))
 		return
 	}
+	// permission check：原任务所在分组与目标分组都需有权限
+	if !requireGroupPermission(w, u, j.JobGroup) || !requireGroupPermission(w, u, req.JobGroup) {
+		return
+	}
 	j.JobGroup, j.Name, j.Author, j.AlarmEmail = req.JobGroup, req.Name, req.Author, req.AlarmEmail
 	j.ScheduleType, j.ScheduleConf, j.MisfireStrategy = req.ScheduleType, req.ScheduleConf, req.MisfireStrategy
 	j.ExecutorRouteStrategy, j.ExecutorHandler, j.ExecutorParam = req.ExecutorRouteStrategy, req.ExecutorHandler, req.ExecutorParam
@@ -290,6 +331,10 @@ func (s *Service) handleJobRemove(w http.ResponseWriter, r *http.Request, u *Job
 		writeJSON(w, returnFail("任务不存在"))
 		return
 	}
+	// permission check
+	if !requireGroupPermission(w, u, j.JobGroup) {
+		return
+	}
 	if j.TriggerStatus == TriggerStatusRunning {
 		writeJSON(w, returnFail("请先停止任务再删除"))
 		return
@@ -309,6 +354,10 @@ func (s *Service) handleJobStartStop(w http.ResponseWriter, r *http.Request, u *
 	j, err := s.store.LoadJobInfo(req.ID)
 	if err != nil {
 		writeJSON(w, returnFail("任务不存在"))
+		return
+	}
+	// permission check
+	if !requireGroupPermission(w, u, j.JobGroup) {
 		return
 	}
 	if start {
@@ -339,6 +388,13 @@ func (s *Service) handleJobTrigger(w http.ResponseWriter, r *http.Request, u *Jo
 	_ = parseBody(r, &req)
 	if req.ID <= 0 {
 		writeJSON(w, returnFail("任务ID非法"))
+		return
+	}
+	// permission check
+	if j, err := s.store.LoadJobInfo(req.ID); err != nil {
+		writeJSON(w, returnFail("任务不存在"))
+		return
+	} else if !requireGroupPermission(w, u, j.JobGroup) {
 		return
 	}
 	s.TriggerPool().trigger(req.ID, TriggerManual, -1, "", req.ExecutorParam, req.AddressList)
@@ -382,15 +438,42 @@ func (s *Service) handleGroupPageList(w http.ResponseWriter, r *http.Request, u 
 	if req.Length <= 0 {
 		req.Length = 10
 	}
-	list, total, err := s.store.ListJobGroups(req.AppName, req.Start, req.Length)
+	// permission check：普通用户只返回授权分组（作为页面下拉数据源）
+	list, total, err := s.store.ListJobGroups(req.AppName, 0, 100000)
 	if err != nil {
 		writeJSON(w, returnFail(err.Error()))
 		return
 	}
-	writeJSON(w, map[string]any{"recordsTotal": total, "data": list})
+	if !u.IsAdmin() {
+		perm := map[int]bool{}
+		for _, g := range u.PermissionGroups() {
+			perm[g] = true
+		}
+		filtered := list[:0]
+		for _, g := range list {
+			if perm[g.ID] {
+				filtered = append(filtered, g)
+			}
+		}
+		list = filtered
+		total = int64(len(list))
+	}
+	// 内存分页（分组数量小）
+	start, end := req.Start, req.Start+req.Length
+	if start > len(list) {
+		start = len(list)
+	}
+	if end > len(list) {
+		end = len(list)
+	}
+	writeJSON(w, map[string]any{"recordsTotal": total, "data": list[start:end]})
 }
 
 func (s *Service) handleGroupSave(w http.ResponseWriter, r *http.Request, u *JobUser) {
+	if u.Role != RoleAdmin {
+		writeJSON(w, returnFail("仅管理员可操作执行器"))
+		return
+	}
 	var req struct {
 		ID          int    `json:"id"`
 		AppName     string `json:"appName"`
@@ -429,6 +512,10 @@ func (s *Service) handleGroupSave(w http.ResponseWriter, r *http.Request, u *Job
 }
 
 func (s *Service) handleGroupRemove(w http.ResponseWriter, r *http.Request, u *JobUser) {
+	if u.Role != RoleAdmin {
+		writeJSON(w, returnFail("仅管理员可操作执行器"))
+		return
+	}
 	var req struct {
 		ID int `json:"id"`
 	}
@@ -465,6 +552,12 @@ func (s *Service) handleLogPageList(w http.ResponseWriter, r *http.Request, u *J
 	if req.Length <= 0 {
 		req.Length = 10
 	}
+	// permission check
+	jobGroup, ok := normalizeQueryGroup(u, req.JobGroup)
+	if !ok {
+		writeJSON(w, map[string]any{"recordsTotal": 0, "data": []any{}})
+		return
+	}
 	var from, to time.Time
 	if req.TimeFrom != "" {
 		from, _ = time.ParseInLocation("2006-01-02 15:04:05", req.TimeFrom, time.Local)
@@ -472,7 +565,7 @@ func (s *Service) handleLogPageList(w http.ResponseWriter, r *http.Request, u *J
 	if req.TimeTo != "" {
 		to, _ = time.ParseInLocation("2006-01-02 15:04:05", req.TimeTo, time.Local)
 	}
-	list, total, err := s.store.PageJobLog(req.JobGroup, req.JobID, from, to, req.LogStatus, req.Start, req.Length)
+	list, total, err := s.store.PageJobLog(jobGroup, req.JobID, from, to, req.LogStatus, req.Start, req.Length)
 	if err != nil {
 		writeJSON(w, returnFail(err.Error()))
 		return
@@ -490,6 +583,10 @@ func (s *Service) handleLogDetailCat(w http.ResponseWriter, r *http.Request, u *
 	l, err := s.store.LoadJobLog(req.LogID)
 	if err != nil || l.ExecutorAddress == "" {
 		writeJSON(w, returnFail("日志不存在或执行器地址为空"))
+		return
+	}
+	// permission check
+	if !requireGroupPermission(w, u, l.JobGroup) {
 		return
 	}
 	group, err := s.store.LoadJobGroup(l.JobGroup)
@@ -519,6 +616,10 @@ func (s *Service) handleLogKill(w http.ResponseWriter, r *http.Request, u *JobUs
 	l, err := s.store.LoadJobLog(req.ID)
 	if err != nil || l.ExecutorAddress == "" {
 		writeJSON(w, returnFail("日志不存在或执行器地址为空"))
+		return
+	}
+	// permission check
+	if !requireGroupPermission(w, u, l.JobGroup) {
 		return
 	}
 	if l.TriggerCode != 200 {
@@ -562,6 +663,10 @@ func (s *Service) handleLogClear(w http.ResponseWriter, r *http.Request, u *JobU
 // ============ 用户管理 ============
 
 func (s *Service) handleUserPageList(w http.ResponseWriter, r *http.Request, u *JobUser) {
+	if u.Role != RoleAdmin {
+		writeJSON(w, returnFail("仅管理员可查看用户列表"))
+		return
+	}
 	var req struct {
 		Start    int    `json:"start"`
 		Length   int    `json:"length"`
@@ -576,6 +681,9 @@ func (s *Service) handleUserPageList(w http.ResponseWriter, r *http.Request, u *
 	if err != nil {
 		writeJSON(w, returnFail(err.Error()))
 		return
+	}
+	for _, item := range list {
+		item.Password = "" // 不回传密码哈希
 	}
 	writeJSON(w, map[string]any{"recordsTotal": total, "data": list})
 }

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"strconv"
 	"strings"
 	"time"
 )
@@ -114,6 +115,42 @@ type JobUser struct {
 	Password   string `json:"password"`
 	Role       int    `json:"role"` // 0-普通用户 1-管理员
 	Permission string `json:"permission"`
+}
+
+// IsAdmin 是否管理员（不受分组权限限制）。
+func (u *JobUser) IsAdmin() bool { return u.Role == RoleAdmin }
+
+// PermissionGroups 解析 permission 字段为授权的执行器分组 ID 列表
+// （对应原版 JobGroupPermissionUtil.parsePermissionInfo）。
+func (u *JobUser) PermissionGroups() []int {
+	if u == nil || u.Permission == "" {
+		return nil
+	}
+	var groups []int
+	for _, part := range strings.Split(u.Permission, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if n, err := strconv.Atoi(part); err == nil && n > 0 {
+			groups = append(groups, n)
+		}
+	}
+	return groups
+}
+
+// HasGroupPermission 校验用户是否有指定执行器分组的权限
+// （对应原版 JobGroupPermissionUtil.validPermission）。
+func (u *JobUser) HasGroupPermission(groupID int) bool {
+	if u.IsAdmin() {
+		return true
+	}
+	for _, g := range u.PermissionGroups() {
+		if g == groupID {
+			return true
+		}
+	}
+	return false
 }
 
 // ============ 常量 ============

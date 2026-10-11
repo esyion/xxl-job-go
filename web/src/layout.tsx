@@ -12,10 +12,14 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [userName, setUserName] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     apiUserInfo().then((ret) => {
-      if (ret.code === 200) setUserName(ret.content.userName)
+      if (ret.code === 200) {
+        setUserName(ret.content.userName)
+        setIsAdmin(ret.content.role === 1)
+      }
     })
   }, [])
 
@@ -24,9 +28,9 @@ export default function Layout() {
   const items = [
     { key: '/', icon: <DashboardOutlined />, label: '运行报表' },
     { key: '/jobinfo', icon: <PartitionOutlined />, label: '任务管理' },
-    { key: '/jobgroup', icon: <ProfileOutlined />, label: '执行器管理' },
+    ...(isAdmin ? [{ key: '/jobgroup', icon: <ProfileOutlined />, label: '执行器管理' }] : []),
     { key: '/joblog', icon: <ProfileOutlined />, label: '调度日志' },
-    { key: '/user', icon: <UserOutlined />, label: '用户管理' },
+    ...(isAdmin ? [{ key: '/user', icon: <UserOutlined />, label: '用户管理' }] : []),
   ]
 
   const doLogout = async () => {
