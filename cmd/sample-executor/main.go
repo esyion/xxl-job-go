@@ -19,6 +19,7 @@ func main() {
 		Address:        "http://127.0.0.1:9999", // 本机调试用；生产多机部署可留空自动探测
 		AdminAddresses: []string{"http://127.0.0.1:8080"},
 		LogPath:        "./logs/xxl-job",
+		GlueEnabled:    true, // 支持 GLUE 脚本任务（Shell/Python/NodeJS/PHP/PowerShell）
 	})
 
 	// 示例：普通 BEAN 任务
