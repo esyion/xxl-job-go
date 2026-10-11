@@ -149,13 +149,16 @@ func (s *scheduler) scheduleLoop() {
 }
 
 // ringLoop 时间轮循环：每秒处理当前刻度 + 回看前 2 个刻度（防漏），刻度内去重（防重）。
+// 与原版 ringThread 一致：循环体直接"睡到下一个整秒"自对齐，保证严格 1Hz；
+// 不能先等 1s 再对齐——两次取整叠加会把节拍拉长到 2s，导致高频任务每个周期
+// 迟到刻度与当前刻度被同时弹出（任务被执行两次）。
 func (s *scheduler) ringLoop() {
 	for {
 		select {
 		case <-s.stop:
 			pkgLog.Info(">>>>>>>>>>> xxl-job, JobScheduleHelper#ringThread stop")
 			return
-		case <-time.After(time.Second):
+		default:
 		}
 		alignSecond()
 
