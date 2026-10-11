@@ -1,0 +1,24 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: xxl-job-go-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: xxl_job
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - xxl-job-go-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  xxl-job-go-mysql:

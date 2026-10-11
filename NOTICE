@@ -1,0 +1,16 @@
+xxl-job-go
+Copyright (c) 2026-present, Esyion.
+
+This project is a Go + React reimplementation of XXL-JOB (https://github.com/xuxueli/xxl-job).
+Upstream project: Copyright (c) 2015-present, xuxueli, licensed under GPL-3.0.
+
+Dependencies:
+================================================================
+
+go-sql-driver/mysql:
+  * LICENSE: MPL-2.0
+  * HOMEPAGE: https://github.com/go-sql-driver/mysql
+
+React / Ant Design / ECharts / Vite (web console):
+  * LICENSE: MIT
+  * HOMEPAGE: https://react.dev / https://ant.design / https://echarts.apache.org / https://vitejs.dev
