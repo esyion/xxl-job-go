@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -36,10 +37,10 @@ func (s *Service) startReportWorker() {
 func (s *Service) refreshReport(day time.Time) {
 	running, suc, fail, err := s.store.LogReportCount(day)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job log report count error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job log report count error:%v", err))
 		return
 	}
 	if err := s.store.UpsertLogReport(day, int(running), int(suc), int(fail)); err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job log report upsert error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job log report upsert error:%v", err))
 	}
 }

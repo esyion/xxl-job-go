@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -46,7 +47,7 @@ func (s *Service) startCallbackWorker() {
 func (s *Service) doCallback(item xxl.CallbackData) {
 	log1, err := s.store.LoadJobLog(item.LogID)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job callback error, log item not found, logId:%d", item.LogID)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job callback error, log item not found, logId:%d", item.LogID))
 		return
 	}
 	if log1.HandleCode > 0 {
@@ -98,6 +99,6 @@ func (s *Service) complete(l *JobLog) {
 
 	// 3、落库
 	if err := s.store.UpdateJobLogHandleInfo(l); err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job complete update log error, logId:%d, err:%v", l.ID, err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job complete update log error, logId:%d, err:%v", l.ID, err))
 	}
 }

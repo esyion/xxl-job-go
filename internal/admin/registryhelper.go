@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -27,12 +28,12 @@ func (s *Service) startRegistryWorker() {
 func (s *Service) refreshRegistry() {
 	deadBefore := time.Now().Add(-90 * time.Second)
 	if _, err := s.store.RegistryRemoveDead(deadBefore); err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job registry remove dead error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job registry remove dead error:%v", err))
 		return
 	}
 	list, err := s.store.RegistryFindAll(deadBefore)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job registry find error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job registry find error:%v", err))
 		return
 	}
 	// 按 appname 聚合地址
@@ -46,7 +47,7 @@ func (s *Service) refreshRegistry() {
 	for key, addrs := range groupAddress {
 		sort.Strings(addrs) // 稳定顺序，避免无谓刷新
 		if err := s.store.UpdateGroupAddressListByAuto(key, strings.Join(addrs, ",")); err != nil {
-			adLog.Printf(">>>>>>>>>>> xxl-job registry group address update error:%v", err)
+			pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job registry group address update error:%v", err))
 		}
 	}
 }

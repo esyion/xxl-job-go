@@ -72,7 +72,7 @@ func (e *emailAlermer) alarm(info *JobInfo, log1 *JobLog) bool {
 	}
 	err := smtp.SendMail(addr, auth, from, strings.Split(info.AlarmEmail, ","), []byte(msg))
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job job alarm email send error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job job alarm email send error:%v", err))
 		return false
 	}
 	return true

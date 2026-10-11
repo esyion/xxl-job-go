@@ -2,15 +2,13 @@ package xxl
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"sync"
 	"time"
-)
 
-var exLog = log.New(os.Stdout, "[xxl-job-executor] ", log.LstdFlags|log.Lmsgprefix)
+	"xxljob-go/pkg/logx"
+)
 
 func itoa(i int) string        { return fmt.Sprintf("%d", i) }
 func panicText(r any) string   { return fmt.Sprintf("job handler panic: %v", r) }
@@ -132,7 +130,7 @@ func (e *Executor) Run() error {
 	e.startRegistryWorker()
 	e.startCallbackWorker()
 	e.startLogFileCleanWorker()
-	exLog.Printf(">>>>>>>>>>> xxl-job executor init success, appname:%s, address:%s", e.cfg.Appname, e.Address())
+	logx.Infof(">>>>>>>>>>> xxl-job executor init success, appname:%s, address:%s", e.cfg.Appname, e.Address())
 	return nil
 }
 
@@ -155,7 +153,7 @@ func (e *Executor) Stop() {
 		_ = e.httpServer.Close()
 	}
 	e.serverWG.Wait()
-	exLog.Printf(">>>>>>>>>>> xxl-job executor destroy success")
+	logx.Info(">>>>>>>>>>> xxl-job executor destroy success")
 }
 
 // startLogFileCleanWorker 每天清理过期日志目录。
@@ -173,7 +171,7 @@ func (e *Executor) pushCallback(data CallbackData) {
 	select {
 	case e.callbackChan <- data:
 	default:
-		exLog.Printf("xxl-job callback queue full, logId:%d dropped", data.LogID)
+		logx.Infof("xxl-job callback queue full, logId:%d dropped", data.LogID)
 	}
 }
 
@@ -190,7 +188,7 @@ func (e *Executor) registJobThread(jobID int, handler JobHandler, handlerName st
 	e.jobThreads.Store(jobID, t)
 	go t.run()
 	if removeOldReason != "" {
-		exLog.Printf(">>>>>>>>>>> xxl-job, running job thread remove, reason:%s", removeOldReason)
+		logx.Infof(">>>>>>>>>>> xxl-job, running job thread remove, reason:%s", removeOldReason)
 	}
 	return t
 }

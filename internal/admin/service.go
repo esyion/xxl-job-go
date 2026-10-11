@@ -40,7 +40,7 @@ func (s *Service) Start() {
 	s.startFailAlarmMonitor()
 	s.startLostMonitor()
 	s.startReportWorker()
-	adLog.Printf(">>>>>>>>>>> xxl-job admin service started.")
+	pkgLog.Info(">>>>>>>>>>> xxl-job admin service started.")
 }
 
 // Stop 优雅停止。
@@ -49,7 +49,7 @@ func (s *Service) Stop() {
 	s.scheduler.stopScheduler()
 	s.wg.Wait()
 	s.triggerPool.stopPool()
-	adLog.Printf(">>>>>>>>>>> xxl-job admin service stopped.")
+	pkgLog.Info(">>>>>>>>>>> xxl-job admin service stopped.")
 }
 
 // TriggerPool 暴露触发能力给 REST/openapi。

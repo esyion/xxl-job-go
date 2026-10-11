@@ -2,6 +2,8 @@ package xxl
 
 import (
 	"time"
+
+	"xxljob-go/pkg/logx"
 )
 
 // startRegistryWorker 注册协程：每 30s 向 admin 心跳注册，成功即停止本轮。
@@ -34,12 +36,12 @@ func (e *Executor) registryOnce(uri string) {
 	for _, client := range e.adminClients {
 		body, err := client.post(uri, param)
 		if err != nil {
-			exLog.Printf("xxl-job %s error, address:%s, err:%v", uri, client.address, err)
+			logx.Infof("xxl-job %s error, address:%s, err:%v", uri, client.address, err)
 			continue
 		}
 		if parseCode(body) == CodeSuccess {
 			return
 		}
-		exLog.Printf("xxl-job %s fail, address:%s, resp:%s", uri, client.address, body)
+		logx.Infof("xxl-job %s fail, address:%s, resp:%s", uri, client.address, body)
 	}
 }

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"xxljob-go/pkg/logx"
 )
 
 // startEmbedServer 内嵌 HTTP 服务，对应 Java EmbedServer(Netty)。
@@ -54,7 +56,7 @@ func (e *Executor) startEmbedServer() error {
 		defer e.serverWG.Done()
 		_ = srv.Serve(ln)
 	}()
-	exLog.Printf(">>>>>>>>>>> xxl-job remoting server start success, address:%s", e.Address())
+	logx.Infof(">>>>>>>>>>> xxl-job remoting server start success, address:%s", e.Address())
 	return nil
 }
 

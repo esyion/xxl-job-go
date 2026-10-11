@@ -4,6 +4,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"xxljob-go/pkg/logx"
 )
 
 // JobHandler 对应 Java IJobHandler；可选实现 Init()/Destroy() 的接口会被识别。
@@ -121,7 +123,7 @@ destroy:
 			h.Destroy()
 		}()
 	}
-	exLog.Printf("xxl-job JobThread stoped, jobId:%d", t.jobID)
+	logx.Infof("xxl-job JobThread stoped, jobId:%d", t.jobID)
 }
 
 // executeOnce 执行一次任务（含超时控制与结果回调）。

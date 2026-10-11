@@ -1,16 +1,13 @@
 package admin
 
 import (
+	"fmt"
 	"database/sql"
-	"log"
-	"os"
 	"sync"
 	"time"
 
 	"xxljob-go/pkg/cronexpr"
 )
-
-var adLog = log.New(os.Stdout, "[xxl-job-admin] ", log.LstdFlags|log.Lmsgprefix)
 
 const preReadMs = 5000 // 调度预读窗口
 
@@ -63,7 +60,7 @@ func newScheduler(store *Store, trigger *triggerPool) *scheduler {
 func (s *scheduler) start() {
 	go s.scheduleLoop()
 	go s.ringLoop()
-	adLog.Printf(">>>>>>>>>>> init xxl-job admin scheduler success.")
+	pkgLog.Info(">>>>>>>>>>> init xxl-job admin scheduler success.")
 }
 
 func (s *scheduler) stopScheduler() {
@@ -86,7 +83,7 @@ func (s *scheduler) scheduleLoop() {
 	for {
 		select {
 		case <-s.stop:
-			adLog.Printf(">>>>>>>>>>> xxl-job, admin JobScheduleHelper#scheduleThread stop")
+			pkgLog.Info(">>>>>>>>>>> xxl-job, admin JobScheduleHelper#scheduleThread stop")
 			return
 		default:
 		}
@@ -99,7 +96,7 @@ func (s *scheduler) scheduleLoop() {
 			err = s.store.ScheduleLock(tx)
 		}
 		if err != nil {
-			adLog.Printf(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:%v", err)
+			pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:%v", err))
 			sleepToNextCycle(preReadSuc)
 			continue
 		}
@@ -108,7 +105,7 @@ func (s *scheduler) scheduleLoop() {
 		list, err := s.store.ScheduleJobQueryTx(tx, nowMs+preReadMs, preReadCount)
 		if err != nil {
 			_ = tx.Rollback()
-			adLog.Printf(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:%v", err)
+			pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job, JobScheduleHelper#scheduleThread error:%v", err))
 			sleepToNextCycle(preReadSuc)
 			continue
 		}
@@ -156,7 +153,7 @@ func (s *scheduler) ringLoop() {
 	for {
 		select {
 		case <-s.stop:
-			adLog.Printf(">>>>>>>>>>> xxl-job, JobScheduleHelper#ringThread stop")
+			pkgLog.Info(">>>>>>>>>>> xxl-job, JobScheduleHelper#ringThread stop")
 			return
 		case <-time.After(time.Second):
 		}
@@ -175,7 +172,7 @@ func (s *scheduler) ringLoop() {
 			seen := map[int]struct{}{}
 			for _, id := range item {
 				if _, dup := seen[id]; dup {
-					adLog.Printf(">>>>>>>>>>> xxl-job, time-ring found job repeat beat : %d = %v", sec, item)
+					pkgLog.Warn(fmt.Sprintf(">>>>>>>>>>> xxl-job, time-ring found job repeat beat : %d = %v", sec, item))
 					continue
 				}
 				seen[id] = struct{}{}
@@ -211,13 +208,11 @@ func (s *scheduler) refreshNextTriggerTime(j *JobInfo, from time.Time) {
 	case err != nil:
 		j.TriggerStatus = TriggerStatusStopped
 		j.TriggerLastTime, j.TriggerNextTime = 0, 0
-		adLog.Printf(">>>>>>>>>>> xxl-job, refreshNextValidTime error for job: jobId=%d, scheduleType=%s, scheduleConf=%s, err=%v",
-			j.ID, j.ScheduleType, j.ScheduleConf, err)
+		pkgLog.Error("refreshNextValidTime error for job", "jobId", j.ID, "scheduleType", j.ScheduleType, "scheduleConf", j.ScheduleConf, "err", err)
 	case next.IsZero():
 		j.TriggerStatus = TriggerStatusStopped
 		j.TriggerLastTime, j.TriggerNextTime = 0, 0
-		adLog.Printf(">>>>>>>>>>> xxl-job, refreshNextValidTime fail for job: jobId=%d, scheduleType=%s, scheduleConf=%s",
-			j.ID, j.ScheduleType, j.ScheduleConf)
+		pkgLog.Warn("refreshNextValidTime fail for job", "jobId", j.ID, "scheduleType", j.ScheduleType, "scheduleConf", j.ScheduleConf)
 	default:
 		j.TriggerStatus = -1 // -1: scheduleUpdate 不更新状态列
 		j.TriggerLastTime = j.TriggerNextTime

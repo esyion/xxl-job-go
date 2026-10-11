@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"xxljob-go/pkg/logx"
 )
 
 // adminClient 执行器 -> 调度中心 的 HTTP 客户端。
@@ -102,13 +104,13 @@ func (e *Executor) doCallback(list []CallbackData) {
 	for _, client := range e.adminClients {
 		body, err := client.post("callback", CallbackRequest{CallbackList: list})
 		if err != nil {
-			exLog.Printf("xxl-job callback error, address:%s, err:%v", client.address, err)
+			logx.Infof("xxl-job callback error, address:%s, err:%v", client.address, err)
 			continue
 		}
 		if parseCode(body) == CodeSuccess {
 			return
 		}
-		exLog.Printf("xxl-job callback fail, address:%s, resp:%s", client.address, body)
+		logx.Infof("xxl-job callback fail, address:%s, resp:%s", client.address, body)
 	}
 	e.persistCallbackFail(list)
 }
@@ -117,13 +119,13 @@ func (e *Executor) doCallback(list []CallbackData) {
 func (e *Executor) persistCallbackFail(list []CallbackData) {
 	dir := e.appender.CallbackLogPath()
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		exLog.Printf("xxl-job persist callback fail-file error: %v", err)
+		logx.Infof("xxl-job persist callback fail-file error: %v", err)
 		return
 	}
 	data, _ := json.Marshal(list)
 	file := filepath.Join(dir, fmt.Sprintf("%d.callback", time.Now().UnixNano()))
 	if err := os.WriteFile(file, data, 0644); err != nil {
-		exLog.Printf("xxl-job persist callback fail-file error: %v", err)
+		logx.Infof("xxl-job persist callback fail-file error: %v", err)
 	}
 }
 

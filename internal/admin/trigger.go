@@ -92,7 +92,7 @@ func (p *triggerPool) trigger(jobID int, triggerType TriggerType,
 		p.processTrigger(jobID, triggerType, failRetryCount, shardingParam, executorParam, addressList)
 	}:
 	default:
-		adLog.Printf(">>>>>>>>>>> xxl-job, admin trigger pool execute too fast, jobId:%d", jobID)
+		pkgLog.Warn(fmt.Sprintf(">>>>>>>>>>> xxl-job, admin trigger pool execute too fast, jobId:%d", jobID))
 	}
 }
 
@@ -118,7 +118,7 @@ func (p *triggerPool) processTrigger(jobID int, triggerType TriggerType,
 
 	jobInfo, err := p.store.LoadJobInfo(jobID)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>>> trigger fail, jobId invalid，jobId=%d", jobID)
+		pkgLog.Warn(fmt.Sprintf(">>>>>>>>>>>> trigger fail, jobId invalid，jobId=%d", jobID))
 		return
 	}
 	if executorParam != "" {
@@ -130,7 +130,7 @@ func (p *triggerPool) processTrigger(jobID int, triggerType TriggerType,
 	}
 	group, err := p.store.LoadJobGroup(jobInfo.JobGroup)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>>> trigger fail, jobGroup invalid，jobId=%d", jobID)
+		pkgLog.Warn(fmt.Sprintf(">>>>>>>>>>>> trigger fail, jobGroup invalid，jobId=%d", jobID))
 		return
 	}
 
@@ -183,7 +183,7 @@ func (p *triggerPool) doProcessTrigger(group *JobGroup, jobInfo *JobInfo, finalF
 	}
 	logID, err := p.store.InsertJobLog(jobLog)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job trigger fail, save log error, jobId:%d, err:%v", jobInfo.ID, err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job trigger fail, save log error, jobId:%d, err:%v", jobInfo.ID, err))
 		return
 	}
 	jobLog.ID = logID
@@ -283,7 +283,7 @@ func (p *triggerPool) doProcessTrigger(group *JobGroup, jobInfo *JobInfo, finalF
 	jobLog.TriggerCode = triggerResult.Code
 	jobLog.TriggerMsg = triggerMsg
 	if err := p.store.UpdateJobLogTriggerInfo(jobLog); err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job trigger fail, update log error, logId:%d, err:%v", logID, err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job trigger fail, update log error, logId:%d, err:%v", logID, err))
 	}
 }
 

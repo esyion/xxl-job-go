@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ func (s *Service) startFailAlarmMonitor() {
 func (s *Service) monitorFailLogs() {
 	ids, err := s.store.FindFailJobLogIDs(1000)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job fail-alarm-monitor find error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job fail-alarm-monitor find error:%v", err))
 		return
 	}
 	for _, id := range ids {
@@ -87,7 +88,7 @@ func (s *Service) monitorLostLogs() {
 	olderThan := time.Now().Add(-10 * time.Minute)
 	ids, err := s.store.FindLostJobLogIDs(olderThan, 100)
 	if err != nil {
-		adLog.Printf(">>>>>>>>>>> xxl-job lost-monitor find error:%v", err)
+		pkgLog.Error(fmt.Sprintf(">>>>>>>>>>> xxl-job lost-monitor find error:%v", err))
 		return
 	}
 	for _, id := range ids {
