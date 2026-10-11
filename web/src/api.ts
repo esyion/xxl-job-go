@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { message } from 'antd'
+import { toast } from 'sonner'
 
 const http = axios.create({ timeout: 60_000 })
 
@@ -149,10 +149,10 @@ export const apiChartInfo = () =>
 // ============ 工具 ============
 export function assertOk(ret: ReturnT, okMsg?: string): boolean {
   if (ret.code === 200) {
-    if (okMsg) message.success(okMsg)
+    if (okMsg) toast.success(okMsg)
     return true
   }
-  message.error(ret.msg || '操作失败')
+  toast.error(ret.msg || '操作失败')
   return false
 }
 
@@ -162,3 +162,14 @@ export const ROUTE_OPTIONS = [
 ]
 
 export const GLUE_OPTIONS = ['BEAN', 'GLUE_SHELL', 'GLUE_PYTHON', 'GLUE_NODEJS', 'GLUE_PHP', 'GLUE_POWERSHELL']
+
+export const BLOCK_OPTIONS = [
+  { value: 'SERIAL_EXECUTION', label: '单机串行' },
+  { value: 'DISCARD_LATER', label: '丢弃后续调度' },
+  { value: 'COVER_EARLY', label: '覆盖之前调度' },
+]
+
+export const MISFIRE_OPTIONS = [
+  { value: 'DO_NOTHING', label: '忽略' },
+  { value: 'FIRE_ONCE_NOW', label: '立即执行一次' },
+]

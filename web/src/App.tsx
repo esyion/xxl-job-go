@@ -1,11 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import Layout from './layout'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import JobInfo from './pages/JobInfo'
-import JobGroup from './pages/JobGroup'
-import JobLog from './pages/JobLog'
-import User from './pages/User'
+import Layout from '@/layout'
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+import JobInfo from '@/pages/JobInfo'
+import JobGroup from '@/pages/JobGroup'
+import JobLog from '@/pages/JobLog'
+import User from '@/pages/User'
 
 export default function App() {
   return (

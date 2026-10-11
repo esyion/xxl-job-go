@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Layout as AntLayout, Menu, Dropdown, message } from 'antd'
-import {
-  DashboardOutlined, PartitionOutlined, ProfileOutlined, UserOutlined, LogoutOutlined,
-} from '@ant-design/icons'
-import { apiLogout, apiUserInfo } from './api'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { PanelLeft, LogOut } from 'lucide-react'
+import { toast } from 'sonner'
 
-const { Sider, Header, Content } = AntLayout
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { AppSidebar } from '@/components/app-sidebar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { apiLogout, apiUserInfo } from '@/api'
 
 export default function Layout() {
   const navigate = useNavigate()
@@ -23,55 +32,48 @@ export default function Layout() {
     })
   }, [])
 
-  const selected = '/' + (location.pathname.split('/')[1] || '')
-
-  const items = [
-    { key: '/', icon: <DashboardOutlined />, label: '运行报表' },
-    { key: '/jobinfo', icon: <PartitionOutlined />, label: '任务管理' },
-    ...(isAdmin ? [{ key: '/jobgroup', icon: <ProfileOutlined />, label: '执行器管理' }] : []),
-    { key: '/joblog', icon: <ProfileOutlined />, label: '调度日志' },
-    ...(isAdmin ? [{ key: '/user', icon: <UserOutlined />, label: '用户管理' }] : []),
-  ]
+  const title =
+    { '/': '运行报表', '/jobinfo': '任务管理', '/jobgroup': '执行器管理', '/joblog': '调度日志', '/user': '用户管理' }[
+      location.pathname
+    ] || 'XXL-JOB'
 
   const doLogout = async () => {
     await apiLogout()
-    message.success('退出成功')
+    toast.success('退出成功')
     navigate('/login')
   }
 
   return (
-    <AntLayout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark" width={200}>
-        <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, padding: '18px 24px' }}>XXL-JOB</div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selected]}
-          items={items}
-          onClick={({ key }) => navigate(key)}
-        />
-      </Sider>
-      <AntLayout>
-        <Header style={{
-          background: '#fff', padding: '0 24px', display: 'flex',
-          justifyContent: 'flex-end', alignItems: 'center', borderBottom: '1px solid #f0f0f0',
-        }}>
-          <Dropdown
-            menu={{
-              items: [
-                { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: doLogout },
-              ],
-            }}
-          >
-            <span style={{ cursor: 'pointer' }}>
-              <UserOutlined /> {userName || '-'}
-            </span>
-          </Dropdown>
-        </Header>
-        <Content style={{ margin: 16 }}>
+    <SidebarProvider>
+      <AppSidebar isAdmin={isAdmin} />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b">
+          <div className="flex flex-1 items-center gap-2 px-3">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <span className="text-sm font-medium">{title}</span>
+          </div>
+          <div className="px-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {userName || '-'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{isAdmin ? '管理员' : '普通用户'}</DropdownMenuLabel>
+                <DropdownMenuItem onClick={doLogout}>
+                  <LogOut />
+                  退出登录
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4">
           <Outlet />
-        </Content>
-      </AntLayout>
-    </AntLayout>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

@@ -8,7 +8,7 @@
 
 - **调度中心（admin）**：Go 实现，调度双循环（数据库事务行锁 + 预读 5s + 秒级时间轮）、fast/slow 双触发池、10 种路由策略、misfire 策略、失败重试、子任务、邮件告警、日志报表，多节点集群部署依旧靠 `xxl_job_lock` 行锁互斥
 - **执行器 SDK（pkg/xxl）**：Go 实现，内嵌 HTTP 服务、每任务一 goroutine 的触发队列、阻塞策略（串行/丢弃/覆盖）、执行日志落盘与滚动读取、GLUE 脚本任务（Shell/Python/NodeJS/PHP/PowerShell）、注册心跳、回调失败落盘重试
-- **管理台（web）**：React + Vite + Ant Design + ECharts：登录、运行报表、任务管理（CRUD/启停/执行一次/GLUE 编辑/cron 预览）、执行器管理、调度日志（终端风格滚动日志/终止任务/清理）、用户管理
+- **管理台（web）**：React 19 + Vite + Tailwind CSS v4 + shadcn/ui（全量组件 + sidebar-03 布局 + recharts 图表）：登录、运行报表、任务管理（CRUD/启停/执行一次/GLUE 编辑/cron 预览）、执行器管理、调度日志（终端风格滚动日志/终止任务/清理）、用户管理
 - **通信协议**：HTTP + JSON，字段与 `xxl-job-core` openapi DTO 完全一致（执行器侧 `/trigger` `/beat` `/idleBeat` `/kill` `/log`，admin 侧 `/api/{callback|registry|addJob|...}`），鉴权为 `XXL-JOB-ACCESS-TOKEN` + `XXL-JOB-APPNAME` 请求头
 - **数据库**：沿用官方 8 张表，开箱即用
 
@@ -100,7 +100,7 @@ GLUE 脚本任务（SHELL/PYTHON/NODEJS/PHP/POWERSHELL）直接在管理台编�
 │   ├── openapi.go        # POST /api/{uri}（callback/registry/任务管理）
 │   ├── webapi.go         # 管理台 REST
 │   └── store.go          # 8 张表数据访问
-├── web/                  # React 管理台（Vite + antd + echarts）
+├── web/                  # React 管理台（Vite + Tailwind v4 + shadcn/ui + recharts）
 └── doc/tables_xxl_job.sql
 ```
 
