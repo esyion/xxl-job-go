@@ -14,18 +14,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Combobox, ComboboxContent, ComboboxChip, ComboboxChips, ComboboxChipsInput,
-  ComboboxEmpty, ComboboxItem, ComboboxList, ComboboxTrigger,
-} from '@/components/ui/combobox'
 import { Skeleton } from '@/components/ui/skeleton'
-import { apiGroupPageList, apiUserPageList, apiUserRemove, apiUserSave, apiUpdatePwd, assertOk, JobGroup, JobUser } from '@/api'
+import { apiUserPageList, apiUserRemove, apiUserSave, apiUpdatePwd, assertOk, JobUser } from '@/api'
 
 export default function UserPage() {
   const [list, setList] = useState<JobUser[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [groups, setGroups] = useState<JobGroup[]>([])
   const [query, setQuery] = useState({ start: 0, length: 10, username: '', role: -1 })
   const [editing, setEditing] = useState<Partial<JobUser> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<JobUser | null>(null)
@@ -43,17 +38,7 @@ export default function UserPage() {
     }
   }, [query])
 
-  useEffect(() => {
-    apiGroupPageList({ start: 0, length: 1000 }).then((p) => setGroups(p.data || []))
-  }, [])
   useEffect(() => { load() }, [load])
-
-  // permission 字符串 <-> 选中 ID 数组
-  const permValues: string[] = (editing?.permission || '')
-    .split(',').map((s) => s.trim()).filter((s) => s !== '')
-  const setPermValues = (ids: string[]) =>
-    setEditing((prev) => ({ ...(prev || {}), permission: ids.map(Number).sort((a, b) => a - b).join(',') }))
-  const groupName = (id: number) => groups.find((g) => g.id === id)?.name || `执行器#${id}`
 
   const openEdit = (u?: JobUser) => {
     setEditing(u ? { ...u, password: '' } : { username: '', password: '', role: 0, permission: '' })
@@ -151,7 +136,7 @@ export default function UserPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing?.id ? `编辑用户 #${editing.id}` : '新增用户'}</DialogTitle>
-            <DialogDescription>普通用户通过勾选执行器控制可访问范围；管理员不受限</DialogDescription>
+            <DialogDescription>普通用户的权限为可访问的执行器 ID，逗号分隔，留空表示全部</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="grid gap-2">
@@ -166,43 +151,18 @@ export default function UserPage() {
             <div className="grid gap-2">
               <Label>角色</Label>
               <Select value={String(editing?.role ?? 0)} onValueChange={(v) => setField('role', Number(v))}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">管理员</SelectItem>
                   <SelectItem value="0">普通用户</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {editing?.role === 0 && (
-              <div className="grid gap-2">
-                <Label>权限（可访问的执行器）</Label>
-                <Combobox
-                  multiple
-                  value={permValues}
-                  onValueChange={(v) => setPermValues(v as string[])}
-                >
-                  <ComboboxTrigger className="w-full">
-                    <ComboboxChips>
-                      {permValues.map((id) => (
-                        <ComboboxChip key={id}>{groupName(Number(id))}</ComboboxChip>
-                      ))}
-                      <ComboboxChipsInput placeholder={permValues.length ? '搜索...' : '点击选择执行器'} />
-                    </ComboboxChips>
-                  </ComboboxTrigger>
-                  <ComboboxContent>
-                    <ComboboxList>
-                      <ComboboxEmpty>无匹配执行器</ComboboxEmpty>
-                      {groups.map((g) => (
-                        <ComboboxItem key={g.id} value={String(g.id)}>
-                          {g.name}（{g.appName}）
-                        </ComboboxItem>
-                      ))}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
-                <p className="text-muted-foreground text-xs">不选择任何执行器表示拥有全部权限</p>
-              </div>
-            )}
+            <div className="grid gap-2">
+              <Label>权限（执行器 ID）</Label>
+              <Input value={editing?.permission || ''} onChange={(e) => setField('permission', e.target.value)}
+                placeholder="逗号分隔，如 1,2；留空为全部" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>取消</Button>
